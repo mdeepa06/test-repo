@@ -1,0 +1,21 @@
+cluster:
+    type: eks
+    cloud: aws
+    name: cluster-a-eks-qa-usw2
+    region: us-west-2
+    environment: qa
+    accountId: "41471525"
+    businessEntityOwner: cloudint
+    businessUnitOwner: abc
+    version: "1.30"
+foundation:
+    ingress:
+        version: 4.0.17
+    istio:
+        canary: true
+        version: 1.24.2
+    istiosupport:
+        version: 1.0.0
+    kiali:
+        version: 1.49.0
+   
