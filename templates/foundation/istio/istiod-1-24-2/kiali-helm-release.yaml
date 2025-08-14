@@ -1,0 +1,71 @@
+{{- if index (datasource "input").foundation "istio" -}}
+{{- $istio := index (datasource "input").foundation.istio "version" -}}
+{{- if or (eq $istio "1.14.3") (eq $istio "1.16.4") (eq $istio "1.18.2") (eq $istio "1.18.5") (eq $istio "1.20.2") (eq $istio "1.20.3") (eq $istio "1.22.2") (eq $istio "1.24.2") -}}
+{{- $kiali := "1.49.0" -}}
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: kiali-server
+  namespace: istio-system
+spec:
+  chart:
+    spec:
+      chart: kiali-server
+      version: {{ $kiali }}
+      sourceRef:
+        kind: HelmRepository
+        name: kiali
+        namespace: infrastructure-{{ index (datasource "input").cluster.environment }}-fluxsystem
+  interval: 5m
+  values:
+    login_token:
+      signing_key: "dummydummydummyd"
+    auth:
+      strategy: token
+    external_services:
+      istio:
+        config_map_name: "istio-{{ $istio | strings.ReplaceAll "." "-" }}"
+        url_service_version: http://istiod-{{ $istio | strings.ReplaceAll "." "-" }}.istio-system:15014/version
+      prometheus:
+        url: "http://monitoringaddon-prometheus-prometheus.lamm:9090"
+      tracing:
+        enabled: false
+
+    deployment:
+      image_name: infacloud-ct-docker.jfrog.io/kiali
+      image_version: v{{ $kiali }}-distroless
+      image_pull_secrets:
+      - tpcdeploybot
+      ingress:
+        enabled: true
+        override_yaml:
+          metadata:
+            name: kiali-istio
+            annotations:
+              cert-manager.io/acme-challenge-type: dns01
+              cert-manager.io/acme-dns01-provider: route53
+              cert-manager.io/cluster-issuer: certissueraddon-ct-acme-issuer
+              certmanager.k8s.io/acme-challenge-type: dns01
+              certmanager.k8s.io/acme-dns01-provider: route53
+              certmanager.k8s.io/cluster-issuer: certissueraddon-ct-acme-issuer
+              kubernetes.io/ingress.class: inginx
+              nginx.ingress.kubernetes.io/backend-protocol: HTTP
+          spec:
+            rules:
+            - http:
+                paths:
+                - path : /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: kiali
+                      port:
+                        number: 20001
+              host: kiali{{ index (datasource "input").dnsConfig.clusterFqdn }}
+
+            tls:
+            - hosts:
+              - kiali{{ index (datasource "input").dnsConfig.clusterFqdn }}
+              secretName: kiali-istio-ssl-cert
+
+{{- end -}}{{- end -}}
