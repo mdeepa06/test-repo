@@ -1,6 +1,6 @@
 {{- if index (datasource "input").foundation "istio" -}}
 {{- $istio := index (datasource "input").foundation.istio "version" -}}
-{{- $bu := index (datasource "input").cluster.businessUnitOwner -}}
+{{- $bu := index (datasource "input").cluster.businessUnit -}}
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
